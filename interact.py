@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F
 
 from transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
-from train import SPECIAL_TOKENS, build_input_from_segments, add_special_tokens_
+from train import SPECIAL_TOKENS, build_input_from_segments, build_baseline_input_from_segments, add_special_tokens_
 from utils import get_dataset, download_pretrained_model
 
 def top_filtering(logits, top_k=0., top_p=0.9, threshold=-float('Inf'), filter_value=-float('Inf')):
@@ -62,10 +62,15 @@ def load_model(model_checkpoint, model_name='openai-gpt', device='cuda:0'):
     add_special_tokens_(model, tokenizer)
     
     return model, tokenizer
-def sample_sequence_through_generate(personality, history, tokenizer, model, args):
+
+def sample_sequence_through_generate(personality, history, tokenizer, model, args, baseline=False):
     special_tokens_ids = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
 
-    instance = build_input_from_segments(personality, history, [], tokenizer, with_eos=False)
+    if baseline:
+        instance = build_baseline_input_from_segments(personality, [], tokenizer, with_eos=False)
+    else:
+        instance = build_input_from_segments(personality, history, [], tokenizer, with_eos=False)
+    
     input_ids = torch.tensor(instance["input_ids"], device=args.device).unsqueeze(0)
     token_type_ids = torch.tensor(instance["token_type_ids"], device=args.device).unsqueeze(0)
     
@@ -91,13 +96,18 @@ def sample_sequence_through_generate(personality, history, tokenizer, model, arg
     
     return generated_counter
 
-def sample_sequence(personality, history, tokenizer, model, args, current_output=None):
+def sample_sequence(personality, history, tokenizer, model, args, current_output=None, baseline=False):
     special_tokens_ids = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
     if current_output is None:
         current_output = []
 
     for i in range(args.max_length):
-        instance = build_input_from_segments(personality, history, current_output, tokenizer, with_eos=False)
+        #instance = build_input_from_segments(personality, history, current_output, tokenizer, with_eos=False)
+
+        if baseline:
+            instance = build_baseline_input_from_segments(personality, current_output, tokenizer, with_eos=False)
+        else:
+            instance = build_input_from_segments(personality, history, current_output, tokenizer, with_eos=False)
 
         input_ids = torch.tensor(instance["input_ids"], device=args.device).unsqueeze(0)
         token_type_ids = torch.tensor(instance["token_type_ids"], device=args.device).unsqueeze(0)
