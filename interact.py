@@ -112,6 +112,10 @@ def sample_sequence(personality, history, tokenizer, model, args, current_output
         input_ids = torch.tensor(instance["input_ids"], device=args.device).unsqueeze(0)
         token_type_ids = torch.tensor(instance["token_type_ids"], device=args.device).unsqueeze(0)
 
+        if input_ids.shape[1] > 510:
+            warnings.warn("Warning: sequense is larger than 512")
+            break
+            
         logits = model(input_ids, token_type_ids=token_type_ids)
         if isinstance(logits, tuple):  # for gpt2 and maybe others
             logits = logits[0]
